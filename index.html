@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AP/AR Summary Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0f1117;--card:#1a1d27;--card2:#21253a;--border:#2e3349;
+    --text:#e8eaf6;--muted:#7c83a8;--accent:#4f7ef8;--accent2:#3a5fd4;
+    --green:#22c55e;--green-bg:#0a2a1a;--green-border:#16532d;
+    --red:#ef4444;--red-bg:#2a0a0a;--red-border:#531616;
+    --gray-bg:#1e2235;--gray-border:#2e3349;
+    --yellow:#f59e0b;--radius:10px;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:2rem 1rem}
+  h1{font-size:1.6rem;font-weight:700;margin-bottom:.25rem}
+  .subtitle{color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1rem}
+  .section-title{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.75rem}
+  .drop-zone{border:1.5px dashed var(--border);border-radius:var(--radius);padding:1.5rem;text-align:center;cursor:pointer;transition:.15s;position:relative;background:var(--bg)}
+  .drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:#111827}
+  .drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+  .drop-icon{font-size:1.5rem;margin-bottom:.5rem;display:block}
+  .drop-label{font-size:.85rem;color:var(--muted)}
+  .drop-label strong{color:var(--accent);font-weight:500}
+  .file-badge{display:flex;align-items:center;gap:.5rem;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:.4rem .75rem;font-size:.82rem;margin-top:.5rem}
+  .file-badge .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .file-badge .remove{color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:.1rem .3rem;border-radius:4px}
+  .file-badge .remove:hover{color:var(--red);background:var(--red-bg)}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.5rem;border-radius:var(--radius);border:none;font-size:.9rem;font-weight:600;cursor:pointer;transition:.15s}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent2)}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+  .btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+  .btn-outline:hover{background:var(--card2)}
+  .btn-outline:disabled{opacity:.4;cursor:not-allowed}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.5rem}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;text-align:center}
+  .stat-val{font-size:2rem;font-weight:700;line-height:1}
+  .stat-lbl{font-size:.75rem;color:var(--muted);margin-top:.25rem}
+  .stat.ok .stat-val{color:var(--green)}
+  .stat.no .stat-val{color:var(--red)}
+  .stat.na .stat-val{color:var(--muted)}
+  .log-box{background:#0a0c14;border:1px solid var(--border);border-radius:var(--radius);padding:1rem;height:160px;overflow-y:auto;font-family:monospace;font-size:.78rem;line-height:1.6;color:#9ca3af}
+  .log-box .ok{color:#4ade80}.log-box .err{color:#f87171}.log-box .info{color:#60a5fa}
+  .progress-bar{height:3px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:1rem}
+  .progress-fill{height:100%;background:var(--accent);width:0;transition:width .3s;border-radius:3px}
+  table{width:100%;border-collapse:collapse;font-size:.82rem}
+  th{background:var(--card2);color:var(--muted);font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;padding:.6rem .75rem;text-align:left;border-bottom:1px solid var(--border);position:sticky;top:0}
+  td{padding:.55rem .75rem;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:hover td{background:#1a1d2f}
+  .badge{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .6rem;border-radius:5px;font-size:.75rem;font-weight:500}
+  .badge.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+  .badge.no{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+  .badge.na{background:var(--gray-bg);color:var(--muted);border:1px solid var(--gray-border)}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .tbl-wrap{overflow:auto;max-height:480px;border:1px solid var(--border);border-radius:var(--radius)}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;gap:.5rem;flex-wrap:wrap}
+  .search-box{background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:.4rem .75rem;color:var(--text);font-size:.85rem;outline:none;min-width:200px}
+  .search-box:focus{border-color:var(--accent)}
+  .filter-btns{display:flex;gap:.4rem}
+  .filter-btn{padding:.35rem .75rem;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.78rem;cursor:pointer;transition:.15s}
+  .filter-btn.active,.filter-btn:hover{background:var(--card2);color:var(--text)}
+  .filter-btn.ok.active{border-color:var(--green-border);color:var(--green);background:var(--green-bg)}
+  .filter-btn.no.active{border-color:var(--red-border);color:var(--red);background:var(--red-bg)}
+  .result-section{display:none}
+  .result-section.show{display:block}
+  #amount-neg{color:var(--red)}
+  .row-ok td:first-child{border-left:2.5px solid var(--green)}
+  .row-no td:first-child{border-left:2.5px solid var(--red)}
+  .row-na td:first-child{border-left:2.5px solid var(--gray-border)}
+  @media(max-width:600px){.stats{grid-template-columns:1fr 1fr 1fr}.stat-val{font-size:1.4rem}}
+</style>
+</head>
+<body>
+
+<h1>AP / AR Summary Tool</h1>
+<p class="subtitle">สรุปยอดตาม Vendor &amp; Customer พร้อมตรวจสอบการหักหน้าบัญชี</p>
+
+<div class="card">
+  <div class="section-title">1. เลือกไฟล์ Mapping (บังคับ) — ต้องมี sheet: AP, AR, mapping</div>
+  <div class="drop-zone" id="dz-map" ondragover="onDrag(event,this)" ondragleave="offDrag(this)" ondrop="onDrop(event,'map')">
+    <input type="file" accept=".xlsx,.xls" id="inp-map" onchange="onFileChange('map')">
+    <span class="drop-icon">📊</span>
+    <div class="drop-label">ลากไฟล์มาวางที่นี่ หรือ <strong>คลิกเพื่อเลือก</strong></div>
+    <div id="badge-map"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">2. เลือกไฟล์ FBL1N (ไม่บังคับ) — สำหรับข้อมูล AP เสริม</div>
+  <div class="drop-zone" id="dz-fbl" ondragover="onDrag(event,this)" ondragleave="offDrag(this)" ondrop="onDrop(event,'fbl')">
+    <input type="file" accept=".xlsx,.xls" id="inp-fbl" onchange="onFileChange('fbl')">
+    <span class="drop-icon">📋</span>
+    <div class="drop-label">ลากไฟล์มาวางที่นี่ หรือ <strong>คลิกเพื่อเลือก</strong></div>
+    <div id="badge-fbl"></div>
+  </div>
+</div>
+
+<div style="margin-bottom:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap">
+  <button class="btn btn-primary" id="btn-run" onclick="run()" disabled>▶ ประมวลผล</button>
+  <button class="btn btn-outline" id="btn-dl" onclick="downloadExcel()" disabled>⬇ ดาวน์โหลด Excel</button>
+</div>
+
+<div class="progress-bar"><div class="progress-fill" id="prog"></div></div>
+<div class="log-box" id="log"></div>
+
+<div class="result-section" id="result-sec">
+  <br>
+  <div class="stats">
+    <div class="stat ok"><div class="stat-val" id="s-ok">—</div><div class="stat-lbl">หักหน้าบัญชีได้</div></div>
+    <div class="stat no"><div class="stat-val" id="s-no">—</div><div class="stat-lbl">หักไม่ได้</div></div>
+    <div class="stat na"><div class="stat-val" id="s-na">—</div><div class="stat-lbl">ไม่มีรายการวางบิล</div></div>
+  </div>
+
+  <div class="card" style="padding:1rem">
+    <div class="toolbar">
+      <input class="search-box" id="search" placeholder="ค้นหา Vendor / Customer / ชื่อ…" oninput="renderTable()">
+      <div class="filter-btns">
+        <button class="filter-btn" id="f-all" onclick="setFilter('all')">ทั้งหมด</button>
+        <button class="filter-btn ok" id="f-ok" onclick="setFilter('ok')">✓ หักได้</button>
+        <button class="filter-btn no" id="f-no" onclick="setFilter('no')">✗ หักไม่ได้</button>
+        <button class="filter-btn" id="f-na" onclick="setFilter('na')">— ไม่มีบิล</button>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Vendor</th>
+            <th>Customer</th>
+            <th>ชื่อ</th>
+            <th class="num">ยอด AP</th>
+            <th class="num">ยอด AR</th>
+            <th>ผลการตรวจสอบ</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div style="padding:.5rem 0;color:var(--muted);font-size:.78rem" id="row-count"></div>
+  </div>
+</div>
+
+<script>
+const files = {map: null, fbl: null};
+let results = [], curFilter = 'all';
+
+function onDrag(e,el){e.preventDefault();el.classList.add('dragover')}
+function offDrag(el){el.classList.remove('dragover')}
+function onDrop(e,key){e.preventDefault();offDrag(document.getElementById('dz-'+key));const f=e.dataTransfer.files[0];if(f)setFile(key,f)}
+function onFileChange(key){const inp=document.getElementById('inp-'+key);if(inp.files[0])setFile(key,inp.files[0])}
+
+function setFile(key,f){
+  files[key]=f;
+  const b=document.getElementById('badge-'+key);
+  b.innerHTML=`<div class="file-badge"><span>📄</span><span class="name">${f.name}</span><span class="remove" onclick="removeFile('${key}')">✕</span></div>`;
+  document.getElementById('btn-run').disabled=!files.map;
+}
+function removeFile(key){
+  files[key]=null;
+  document.getElementById('badge-'+key).innerHTML='';
+  document.getElementById('inp-'+key).value='';
+  if(key==='map') document.getElementById('btn-run').disabled=true;
+}
+
+function log(msg,cls=''){
+  const box=document.getElementById('log');
+  const line=document.createElement('div');
+  if(cls) line.className=cls;
+  line.textContent=msg;
+  box.appendChild(line);
+  box.scrollTop=box.scrollHeight;
+}
+function setProgress(p){document.getElementById('prog').style.width=(p*100)+'%'}
+
+function fmtNum(v){
+  if(v==null||isNaN(v)) return '—';
+  return new Intl.NumberFormat('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
+}
+
+function readWorkbook(file){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{res(XLSX.read(new Uint8Array(e.target.result),{type:'array'}))}catch(err){rej(err)}
+    };
+    reader.onerror=rej;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function sheetToRows(wb,name){
+  const ws=wb.Sheets[name];
+  if(!ws) return null;
+  return XLSX.utils.sheet_to_json(ws,{defval:null});
+}
+
+async function run(){
+  document.getElementById('btn-run').disabled=true;
+  document.getElementById('btn-dl').disabled=true;
+  document.getElementById('result-sec').classList.remove('show');
+  document.getElementById('log').innerHTML='';
+  setProgress(0);
+  results=[];
+
+  try{
+    log('📂 อ่านข้อมูล Mapping File…','info');
+    setProgress(.1);
+    const mapWb=await readWorkbook(files.map);
+
+    const apRows=sheetToRows(mapWb,'AP');
+    const arRows=sheetToRows(mapWb,'AR');
+    const mapRows=sheetToRows(mapWb,'mapping');
+    if(!apRows) throw new Error('ไม่พบ sheet "AP" ในไฟล์ Mapping');
+    if(!arRows) throw new Error('ไม่พบ sheet "AR" ในไฟล์ Mapping');
+    if(!mapRows) throw new Error('ไม่พบ sheet "mapping" ในไฟล์ Mapping');
+
+    log(`  AP sheet   ${apRows.length.toLocaleString()} rows`);
+    log(`  AR sheet   ${arRows.length.toLocaleString()} rows`);
+    log(`  mapping    ${mapRows.length.toLocaleString()} rows`);
+    setProgress(.2);
+
+    // Build lookups
+    const vendorToCust={}, custToVendor={}, custToName={};
+    mapRows.forEach(r=>{
+      const v=String(r['Vendor']||'').trim();
+      const c=String(r['Customer']||'').trim();
+      const n=String(r['Name']||'').trim();
+      if(v&&c){vendorToCust[v]=c; custToVendor[c]=v; custToName[c]=n;}
+    });
+
+    // Process AP
+    const apProcessed={};
+    apRows.forEach(r=>{
+      let account=String(r['Account']||r['Vendor No']||'').trim();
+      let custRaw=r['Customer']!==undefined?r['Customer']:r['Customer No'];
+      let customer=null;
+      if(custRaw!=null&&custRaw!==''){
+        const n=parseInt(custRaw);
+        if(!isNaN(n)) customer=String(n);
+      }
+      if(!customer) customer=vendorToCust[account]||null;
+      if(!customer) return;
+
+      const amt=parseFloat(r['Amount in doc. curr.']||0);
+      if(!apProcessed[customer]) apProcessed[customer]={total:0,hasInvoice:false};
+      apProcessed[customer].total+=amt;
+      if(amt<0) apProcessed[customer].hasInvoice=true;
+    });
+    log(`\n🔢 AP summary → ${Object.keys(apProcessed).length.toLocaleString()} customers`);
+    setProgress(.4);
+
+    // FBL1N
+    if(files.fbl){
+      log('📂 อ่าน FBL1N…','info');
+      const fblWb=await readWorkbook(files.fbl);
+      const fblRows=sheetToRows(fblWb,'FBL1N');
+      if(!fblRows) throw new Error('ไม่พบ sheet "FBL1N" ในไฟล์ที่เลือก');
+      let added=0;
+      fblRows.forEach(r=>{
+        const account=String(r['Account']||'').trim();
+        const customer=vendorToCust[account];
+        if(!customer||apProcessed[customer]) return;
+        const amt=parseFloat(r['Amount in doc. curr.']||0);
+        if(!apProcessed[customer]) apProcessed[customer]={total:0,hasInvoice:false};
+        apProcessed[customer].total+=amt;
+        if(amt<0) apProcessed[customer].hasInvoice=true;
+        added++;
+      });
+      log(`  FBL1N เพิ่ม ${added} entries`);
+      setProgress(.55);
+    }
+
+    // Process AR — detect amount column
+    const arHeaders=Object.keys(arRows[0]||{});
+    const amtCol=arHeaders.find(h=>h&&(h.toLowerCase().includes('amount')||h.includes('จำนวนเงิน')))||arHeaders[11]||arHeaders[10];
+    log(`  AR amount column: ${amtCol}`);
+
+    const arGrouped={};
+    arRows.forEach(r=>{
+      const custRaw=r['customer no'];
+      if(custRaw==null||custRaw==='') return;
+      const n=parseInt(custRaw);
+      if(isNaN(n)) return;
+      const customer=String(n);
+      const amt=parseFloat(r[amtCol]||0);
+      arGrouped[customer]=(arGrouped[customer]||0)+amt;
+    });
+    log(`🔢 AR summary → ${Object.keys(arGrouped).length.toLocaleString()} customers`);
+    setProgress(.7);
+
+    // Compare
+    results=Object.keys(arGrouped).sort().map(customer=>{
+      const arTotal=arGrouped[customer];
+      const vendor=custToVendor[customer]||'';
+      const name=custToName[customer]||'';
+      const apData=apProcessed[customer];
+      let apTotal=null,status;
+      if(!apData){
+        status='ไม่มีรายการวางบิล';
+      }else if(!apData.hasInvoice){
+        apTotal=apData.total;
+        status='ไม่มีรายการวางบิล';
+      }else{
+        apTotal=apData.total;
+        status=Math.abs(apTotal)>=arTotal?'หักหน้าบัญชีได้':'หักไม่ได้ เนื่องจากยอด Inv. น้อยกว่ายอดหักหน้าบัญชี';
+      }
+      return{vendor,customer,name,arTotal,apTotal,status};
+    });
+
+    const nOk=results.filter(r=>r.status==='หักหน้าบัญชีได้').length;
+    const nNo=results.filter(r=>r.status.startsWith('หักไม่ได้')).length;
+    const nNa=results.filter(r=>r.status==='ไม่มีรายการวางบิล').length;
+
+    log(`\n📊 ผลการตรวจสอบ`,'info');
+    log(`  ✅ หักหน้าบัญชีได้       ${nOk} รายการ`,'ok');
+    log(`  ❌ หักไม่ได้              ${nNo} รายการ`,'err');
+    log(`  ➖ ไม่มีรายการวางบิล      ${nNa} รายการ`);
+    log(`  รวม ${results.length} รายการ`);
+    setProgress(1);
+
+    document.getElementById('s-ok').textContent=nOk;
+    document.getElementById('s-no').textContent=nNo;
+    document.getElementById('s-na').textContent=nNa;
+    document.getElementById('result-sec').classList.add('show');
+    curFilter='all';
+    renderTable();
+    document.getElementById('btn-dl').disabled=false;
+    downloadExcel();
+
+  }catch(err){
+    log('❌ Error: '+err.message,'err');
+    setProgress(0);
+  }finally{
+    document.getElementById('btn-run').disabled=!files.map;
+  }
+}
+
+function setFilter(f){
+  curFilter=f;
+  ['all','ok','no','na'].forEach(k=>{
+    const el=document.getElementById('f-'+k);
+    el.classList.toggle('active',k===f);
+  });
+  renderTable();
+}
+
+function renderTable(){
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  let rows=results.filter(r=>{
+    if(curFilter==='ok'&&r.status!=='หักหน้าบัญชีได้') return false;
+    if(curFilter==='no'&&!r.status.startsWith('หักไม่ได้')) return false;
+    if(curFilter==='na'&&r.status!=='ไม่มีรายการวางบิล') return false;
+    if(q&&!`${r.vendor} ${r.customer} ${r.name}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const tbody=document.getElementById('tbody');
+  tbody.innerHTML=rows.map((r,i)=>{
+    const st=r.status==='หักหน้าบัญชีได้'?'ok':r.status.startsWith('หักไม่ได้')?'no':'na';
+    const badge=st==='ok'?`<span class="badge ok">✓ หักได้</span>`:st==='no'?`<span class="badge no">✗ หักไม่ได้</span>`:`<span class="badge na">— ไม่มีบิล</span>`;
+    const apColor=r.apTotal!=null&&r.apTotal<0?' id="amount-neg"':'';
+    return `<tr class="row-${st}">
+      <td style="color:var(--muted)">${i+1}</td>
+      <td><code style="font-size:.8rem;color:var(--accent)">${r.vendor||'—'}</code></td>
+      <td><code style="font-size:.8rem;color:var(--accent)">${r.customer}</code></td>
+      <td style="color:var(--text)">${r.name||'—'}</td>
+      <td class="num"${apColor}>${fmtNum(r.apTotal)}</td>
+      <td class="num" style="color:var(--green)">${fmtNum(r.arTotal)}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('row-count').textContent=`แสดง ${rows.length} จาก ${results.length} รายการ`;
+}
+
+function downloadExcel(){
+  if(!results.length) return;
+  const wb=XLSX.utils.book_new();
+
+  // Colors
+  const HDR_FILL={patternType:'solid',fgColor:{rgb:'1F4E79'}};
+  const GREEN_FILL={patternType:'solid',fgColor:{rgb:'E8F5E9'}};
+  const RED_FILL={patternType:'solid',fgColor:{rgb:'FFEBEE'}};
+  const GRAY_FILL={patternType:'solid',fgColor:{rgb:'F5F5F5'}};
+  const ALT_FILL={patternType:'solid',fgColor:{rgb:'EEF2FF'}};
+  const HDR_FONT={bold:true,color:{rgb:'FFFFFF'},sz:10};
+  const BOLD={bold:true,sz:10};
+  const BASE={sz:10};
+  const NUM_FMT='#,##0.00';
+  const border={top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}};
+
+  function hdrCell(v){return{v,t:'s',s:{fill:HDR_FILL,font:HDR_FONT,alignment:{horizontal:'center',vertical:'center',wrapText:true},border}}}
+  function cell(v,t,fill,bold,numFmt){
+    const s={fill,font:bold?BOLD:BASE,alignment:{vertical:'center'},border};
+    if(numFmt) s.numFmt=numFmt;
+    return{v:v??'',t:t||'s',s};
+  }
+
+  // AR Summary sheet (main result)
+  const arData=[[
+    hdrCell('Vendor No'),hdrCell('Customer No'),hdrCell('ชื่อ'),
+    hdrCell('ยอด AP'),hdrCell('ยอด AR'),hdrCell('ผลการตรวจสอบ')
+  ]];
+  results.forEach((r,i)=>{
+    const st=r.status==='หักหน้าบัญชีได้'?'ok':r.status.startsWith('หักไม่ได้')?'no':'na';
+    const fill=st==='ok'?GREEN_FILL:st==='no'?RED_FILL:GRAY_FILL;
+    arData.push([
+      cell(r.vendor,'s',i%2===0?{patternType:'solid',fgColor:{rgb:'FFFFFF'}}:ALT_FILL),
+      cell(r.customer,'s',i%2===0?{patternType:'solid',fgColor:{rgb:'FFFFFF'}}:ALT_FILL),
+      cell(r.name,'s',i%2===0?{patternType:'solid',fgColor:{rgb:'FFFFFF'}}:ALT_FILL),
+      cell(r.apTotal!=null?r.apTotal:null,'n',fill,false,NUM_FMT),
+      cell(r.arTotal,'n',fill,false,NUM_FMT),
+      cell(r.status,'s',fill,true),
+    ]);
+  });
+  const wsAR=XLSX.utils.aoa_to_sheet(arData);
+  wsAR['!cols']=[{wch:14},{wch:14},{wch:36},{wch:16},{wch:16},{wch:44}];
+  wsAR['!rows']=[{hpt:28},...results.map(()=>({hpt:20}))];
+  wsAR['!freeze']={xSplit:0,ySplit:1};
+  XLSX.utils.book_append_sheet(wb,wsAR,'AR Summary');
+
+  const fname=`AP_AR_Summary_${new Date().toLocaleDateString('th-TH').replace(/\//g,'')}.xlsx`;
+  XLSX.writeFile(wb,fname);
+}
+
+// Init filter
+setFilter('all');
+</script>
+</body>
+</html>
