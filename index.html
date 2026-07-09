@@ -251,15 +251,20 @@ function parseCSV(text){
 }
 
 async function fetchGSMapping(){
-  const resp=await fetch(GS_URL);
-  if(!resp.ok) throw new Error('ไม่สามารถดึงข้อมูล Mapping จาก Google Sheets ได้ (กรุณาตรวจสอบสิทธิ์การเข้าถึง)');
+  let resp;
+  try{ resp=await fetch(GS_URL); }
+  catch(e){ throw new Error('ไม่สามารถเชื่อมต่อ Google Sheets ได้ — กรุณาตรวจสอบว่าไฟล์ถูกตั้งเป็น "Anyone with the link" (Viewer) แล้ว'); }
+  if(resp.status===401||resp.status===403) throw new Error('Google Sheets ไม่อนุญาตการเข้าถึง — กรุณาเปิดสิทธิ์ Share → "Anyone with the link" → Viewer');
+  if(!resp.ok) throw new Error(`ดึงข้อมูล Google Sheets ไม่ได้ (HTTP ${resp.status})`);
   const text=await resp.text();
-  const rows=parseCSV(text).slice(1); // skip header
-  return rows.filter(r=>r[2]&&r[3]).map(r=>({
+  const rows=parseCSV(text).slice(1);
+  const mapped=rows.filter(r=>r[2]&&r[3]).map(r=>({
     vendor:String(r[2]||'').trim(),
     customer:String(r[3]||'').trim(),
     name:String(r[1]||'').trim()
   }));
+  if(!mapped.length) throw new Error('ไม่พบข้อมูลใน sheet Master_MEC — กรุณาตรวจสอบชื่อ sheet และ column B, C, D');
+  return mapped;
 }
 
 async function setFile(key,f){
