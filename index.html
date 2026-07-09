@@ -235,6 +235,25 @@ function onFileChange(key){const inp=document.getElementById('inp-'+key);if(inp.
 
 const REQUIRED_SHEETS={map:['AP','AR','mapping'],fbl:['FBL1N']};
 
+// Required columns per sheet (at least one from each group must exist)
+const REQUIRED_COLS={
+  map:{
+    AP:[['Account','Vendor No'],['Amount in doc. curr.']],
+    AR:[['customer no']],
+    mapping:[['Vendor'],['Customer'],['Name']]
+  },
+  fbl:{
+    FBL1N:[['Account'],['Amount in doc. curr.']]
+  }
+};
+
+function getSheetCols(wb,sheetName){
+  const ws=wb.Sheets[sheetName];
+  if(!ws) return [];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+  return (rows[0]||[]).map(c=>String(c||'').trim()).filter(Boolean);
+}
+
 async function setFile(key,f){
   const b=document.getElementById('badge-'+key);
   const dz=document.getElementById('dz-'+key);
@@ -254,6 +273,32 @@ async function setFile(key,f){
         <div style="flex:1">
           <div class="name">${f.name}</div>
           <div class="err-msg">format ไฟล์ไม่ถูกต้อง รบกวนตรวจสอบไฟล์อีกครั้ง (ไม่พบ sheet: ${missing.join(', ')})</div>
+        </div>
+        <span class="remove" onclick="removeFile('${key}')">✕</span>
+      </div>`;
+      files[key]=null;
+      document.getElementById('btn-run').disabled=true;
+      return;
+    }
+
+    // Validate required columns per sheet
+    const colErrors=[];
+    const colRules=REQUIRED_COLS[key]||{};
+    for(const [sheetName,groups] of Object.entries(colRules)){
+      const cols=getSheetCols(wb,sheetName);
+      for(const group of groups){
+        const found=group.some(c=>cols.includes(c));
+        if(!found) colErrors.push(`sheet "${sheetName}" ไม่พบคอลัมน์ "${group.join('" หรือ "')}"`);
+      }
+    }
+
+    if(colErrors.length>0){
+      dz.classList.add('invalid');
+      b.innerHTML=`<div class="file-badge error">
+        <span>⚠️</span>
+        <div style="flex:1">
+          <div class="name">${f.name}</div>
+          <div class="err-msg">format ไฟล์ไม่ถูกต้อง รบกวนตรวจสอบไฟล์อีกครั้ง (${colErrors[0]})</div>
         </div>
         <span class="remove" onclick="removeFile('${key}')">✕</span>
       </div>`;
