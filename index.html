@@ -36,9 +36,12 @@
   .drop-label{font-size:.82rem;color:var(--muted)}
   .drop-label strong{color:var(--accent);font-weight:500}
   .file-badge{display:flex;align-items:center;gap:.5rem;background:var(--accent-soft);border:1px solid var(--border);border-radius:8px;padding:.45rem .875rem;font-size:.8rem;margin-top:.625rem;color:var(--text)}
+  .file-badge.error{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
   .file-badge .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .file-badge .remove{color:var(--muted);cursor:pointer;line-height:1;padding:.15rem .35rem;border-radius:4px;font-size:.85rem}
   .file-badge .remove:hover{color:var(--red);background:var(--red-bg)}
+  .file-badge .err-msg{font-size:.75rem;color:var(--red);margin-top:.2rem}
+  .drop-zone.invalid{border-color:var(--red);background:var(--red-bg)}
   .actions{margin-bottom:1.5rem;display:flex;gap:.625rem;flex-wrap:wrap}
   .btn{display:inline-flex;align-items:center;gap:.45rem;padding:.6rem 1.375rem;border-radius:8px;border:none;font-size:.85rem;font-weight:500;cursor:pointer;transition:.18s;font-family:inherit}
   .btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 2px rgba(74,108,247,.25)}
@@ -209,18 +212,59 @@ function offDrag(el){el.classList.remove('dragover')}
 function onDrop(e,key){e.preventDefault();offDrag(document.getElementById('dz-'+key));const f=e.dataTransfer.files[0];if(f)setFile(key,f)}
 function onFileChange(key){const inp=document.getElementById('inp-'+key);if(inp.files[0])setFile(key,inp.files[0])}
 
-function setFile(key,f){
-  files[key]=f;
+const REQUIRED_SHEETS={map:['AP','AR','mapping'],fbl:['FBL1N']};
+
+async function setFile(key,f){
   const b=document.getElementById('badge-'+key);
-  b.innerHTML=`<div class="file-badge"><span>📄</span><span class="name">${f.name}</span><span class="remove" onclick="removeFile('${key}')">✕</span></div>`;
+  const dz=document.getElementById('dz-'+key);
+  b.innerHTML=`<div class="file-badge"><span>⏳</span><span class="name">${f.name}</span></div>`;
   document.getElementById('inp-'+key).style.pointerEvents='none';
-  document.getElementById('btn-run').disabled=!files.map;
+
+  try{
+    const wb=await readWorkbook(f);
+    const sheets=wb.SheetNames.map(s=>s.trim());
+    const required=REQUIRED_SHEETS[key];
+    const missing=required.filter(s=>!sheets.includes(s));
+
+    if(missing.length>0){
+      dz.classList.add('invalid');
+      b.innerHTML=`<div class="file-badge error">
+        <span>⚠️</span>
+        <div style="flex:1">
+          <div class="name">${f.name}</div>
+          <div class="err-msg">format ไฟล์ไม่ถูกต้อง รบกวนตรวจสอบไฟล์อีกครั้ง (ไม่พบ sheet: ${missing.join(', ')})</div>
+        </div>
+        <span class="remove" onclick="removeFile('${key}')">✕</span>
+      </div>`;
+      files[key]=null;
+      document.getElementById('btn-run').disabled=true;
+    }else{
+      dz.classList.remove('invalid');
+      files[key]=f;
+      b.innerHTML=`<div class="file-badge"><span>📄</span><span class="name">${f.name}</span><span class="remove" onclick="removeFile('${key}')">✕</span></div>`;
+      document.getElementById('btn-run').disabled=!files.map;
+    }
+  }catch(err){
+    dz.classList.add('invalid');
+    b.innerHTML=`<div class="file-badge error">
+      <span>⚠️</span>
+      <div style="flex:1">
+        <div class="name">${f.name}</div>
+        <div class="err-msg">ไม่สามารถอ่านไฟล์ได้ รบกวนตรวจสอบว่าเป็นไฟล์ Excel (.xlsx/.xls)</div>
+      </div>
+      <span class="remove" onclick="removeFile('${key}')">✕</span>
+    </div>`;
+    files[key]=null;
+    document.getElementById('btn-run').disabled=true;
+  }
 }
+
 function removeFile(key){
   files[key]=null;
   document.getElementById('badge-'+key).innerHTML='';
   document.getElementById('inp-'+key).value='';
   document.getElementById('inp-'+key).style.pointerEvents='';
+  document.getElementById('dz-'+key).classList.remove('invalid');
   if(key==='map') document.getElementById('btn-run').disabled=true;
 }
 
