@@ -74,10 +74,10 @@
   .filter-btn.ok.active{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
   .filter-btn.no.active{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
   .cond-wrap{position:relative;display:inline-block}
-  .cond-btn{padding:.32rem .7rem;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--sub);font-size:.75rem;cursor:pointer;font-family:inherit;font-weight:500;transition:.15s}
+  .cond-btn{padding:.32rem .7rem;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--sub);font-size:.75rem;cursor:default;font-family:inherit;font-weight:500;transition:.15s}
   .cond-btn:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
   .cond-tooltip{display:none;position:absolute;right:0;top:calc(100% + 6px);width:300px;background:var(--card);border:1px solid var(--border2);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.10);padding:1rem;z-index:99;font-size:.8rem}
-  .cond-tooltip.show{display:block}
+  .cond-wrap:hover .cond-tooltip{display:block}
   .cond-title{font-weight:600;font-size:.82rem;color:var(--text);margin-bottom:.75rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
   .cond-row{display:flex;gap:.6rem;align-items:flex-start;margin-bottom:.6rem;color:var(--text);line-height:1.5}
   .cond-row:last-child{margin-bottom:0}
@@ -194,7 +194,7 @@
         <button class="filter-btn no" id="f-no" onclick="setFilter('no')">✗ หักไม่ได้</button>
         <button class="filter-btn" id="f-na" onclick="setFilter('na')">— ไม่มีบิล</button>
         <div class="cond-wrap">
-          <button class="cond-btn" onclick="toggleCond(event)">ℹ เงื่อนไข</button>
+          <button class="cond-btn">ℹ เงื่อนไข</button>
           <div class="cond-tooltip" id="cond-tooltip">
             <div class="cond-title">เงื่อนไขการตรวจสอบ</div>
             <div class="cond-row ok"><span class="cond-dot ok"></span><div>
@@ -521,11 +521,6 @@ async function run(){
   }
 }
 
-function toggleCond(e){
-  e.stopPropagation();
-  document.getElementById('cond-tooltip').classList.toggle('show');
-}
-document.addEventListener('click',()=>document.getElementById('cond-tooltip')?.classList.remove('show'));
 
 function setFilter(f){
   curFilter=f;
