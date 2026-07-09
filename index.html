@@ -197,9 +197,24 @@
           <button class="cond-btn" onclick="toggleCond(event)">ℹ เงื่อนไข</button>
           <div class="cond-tooltip" id="cond-tooltip">
             <div class="cond-title">เงื่อนไขการตรวจสอบ</div>
-            <div class="cond-row ok"><span class="cond-dot ok"></span><div><strong>หักหน้าบัญชีได้</strong><br>มีรายการ Invoice ใน AP และ ยอด AP ≥ ยอด AR</div></div>
-            <div class="cond-row no"><span class="cond-dot no"></span><div><strong>หักไม่ได้</strong><br>มีรายการ Invoice ใน AP แต่ ยอด AP &lt; ยอด AR</div></div>
-            <div class="cond-row na"><span class="cond-dot na"></span><div><strong>ไม่มีรายการวางบิล</strong><br>ไม่มีรายการ Invoice ใน AP หรือมีแต่ Credit Note อย่างเดียว</div></div>
+            <div class="cond-row ok"><span class="cond-dot ok"></span><div>
+              <strong>✅ หักหน้าบัญชีได้</strong><br>
+              พบรายการ Invoice (ยอดติดลบ) ใน AP และ<br>
+              <span style="color:var(--sub)">|ยอด AP| ≥ ยอด AR</span><br>
+              <span style="font-size:.72rem;color:var(--muted)">→ สามารถหักหน้าบัญชีได้เต็มจำนวน</span>
+            </div></div>
+            <div class="cond-row no"><span class="cond-dot no"></span><div>
+              <strong>❌ หักไม่ได้</strong><br>
+              พบรายการ Invoice ใน AP แต่<br>
+              <span style="color:var(--sub)">|ยอด AP| &lt; ยอด AR</span><br>
+              <span style="font-size:.72rem;color:var(--muted)">→ ยอด Invoice น้อยกว่ายอดที่ต้องหัก</span>
+            </div></div>
+            <div class="cond-row na"><span class="cond-dot na"></span><div>
+              <strong>➖ ไม่มีรายการวางบิล</strong><br>
+              ไม่พบรายการ Invoice ใน AP<br>
+              หรือมีเฉพาะ Credit Note (ยอดบวก) เท่านั้น<br>
+              <span style="font-size:.72rem;color:var(--muted)">→ ยังไม่มีการวางบิลจาก Vendor</span>
+            </div></div>
           </div>
         </div>
       </div>
