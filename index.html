@@ -234,7 +234,7 @@ function onDrop(e,key){e.preventDefault();offDrag(document.getElementById('dz-'+
 function onFileChange(key){const inp=document.getElementById('inp-'+key);if(inp.files[0])setFile(key,inp.files[0])}
 
 const REQUIRED_SHEETS={map:['AP','AR'],fbl:['FBL1N']};
-const GS_URL='https://docs.google.com/spreadsheets/d/1apWodsX7_sybpQtWeqsyDY6L-vLMN9aQUBkmwhgRY4k/export?format=csv&sheet=Master_MEC';
+const GS_URL='https://docs.google.com/spreadsheets/d/1apWodsX7_sybpQtWeqsyDY6L-vLMN9aQUBkmwhgRY4k/gviz/tq?tqx=out:csv&sheet=Master_MEC';
 
 function parseCSV(text){
   const rows=[];let row=[],field='',inQ=false;
