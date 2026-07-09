@@ -133,7 +133,7 @@
   <div class="section-label">
     <span class="section-num">1</span>
     <span class="section-title">Mapping File <span style="color:var(--red);font-size:.75rem">*บังคับ</span></span>
-    <span class="section-hint">ต้องมี sheet: AP, AR</span>
+    <span class="section-hint">ต้องมี sheet: AP, AR, mapping</span>
   </div>
   <div class="drop-zone" id="dz-map" ondragover="onDrag(event,this)" ondragleave="offDrag(this)" ondrop="onDrop(event,'map')">
     <input type="file" accept=".xlsx,.xls" id="inp-map" onchange="onFileChange('map')">
@@ -233,39 +233,7 @@ function offDrag(el){el.classList.remove('dragover')}
 function onDrop(e,key){e.preventDefault();offDrag(document.getElementById('dz-'+key));const f=e.dataTransfer.files[0];if(f)setFile(key,f)}
 function onFileChange(key){const inp=document.getElementById('inp-'+key);if(inp.files[0])setFile(key,inp.files[0])}
 
-const REQUIRED_SHEETS={map:['AP','AR'],fbl:['FBL1N']};
-const GS_URL='https://docs.google.com/spreadsheets/d/1apWodsX7_sybpQtWeqsyDY6L-vLMN9aQUBkmwhgRY4k/gviz/tq?tqx=out:csv&sheet=Master_MEC';
-
-function parseCSV(text){
-  const rows=[];let row=[],field='',inQ=false;
-  for(let i=0;i<text.length;i++){
-    const c=text[i];
-    if(inQ){if(c==='"'){if(text[i+1]==='"'){field+='"';i++;}else inQ=false;}else field+=c;}
-    else if(c==='"') inQ=true;
-    else if(c===','){row.push(field);field='';}
-    else if(c==='\n'){row.push(field);rows.push(row);row=[];field='';}
-    else if(c!=='\r') field+=c;
-  }
-  if(field||row.length){row.push(field);rows.push(row);}
-  return rows;
-}
-
-async function fetchGSMapping(){
-  let resp;
-  try{ resp=await fetch(GS_URL); }
-  catch(e){ throw new Error('ไม่สามารถเชื่อมต่อ Google Sheets ได้ — กรุณาตรวจสอบว่าไฟล์ถูกตั้งเป็น "Anyone with the link" (Viewer) แล้ว'); }
-  if(resp.status===401||resp.status===403) throw new Error('Google Sheets ไม่อนุญาตการเข้าถึง — กรุณาเปิดสิทธิ์ Share → "Anyone with the link" → Viewer');
-  if(!resp.ok) throw new Error(`ดึงข้อมูล Google Sheets ไม่ได้ (HTTP ${resp.status})`);
-  const text=await resp.text();
-  const rows=parseCSV(text).slice(1);
-  const mapped=rows.filter(r=>r[2]&&r[3]).map(r=>({
-    vendor:String(r[2]||'').trim(),
-    customer:String(r[3]||'').trim(),
-    name:String(r[1]||'').trim()
-  }));
-  if(!mapped.length) throw new Error('ไม่พบข้อมูลใน sheet Master_MEC — กรุณาตรวจสอบชื่อ sheet และ column B, C, D');
-  return mapped;
-}
+const REQUIRED_SHEETS={map:['AP','AR','mapping'],fbl:['FBL1N']};
 
 async function setFile(key,f){
   const b=document.getElementById('badge-'+key);
@@ -362,28 +330,28 @@ async function run(){
   results=[];
 
   try{
-    log('🌐 ดึงข้อมูล Mapping จาก Google Sheets…','info');
-    setProgress(.05);
-    const gsRows=await fetchGSMapping();
-    log(`  Master_MEC  ${gsRows.length.toLocaleString()} rows`);
-
-    log('📂 อ่านข้อมูล AP / AR File…','info');
+    log('📂 อ่านข้อมูล Mapping File…','info');
     setProgress(.1);
     const mapWb=await readWorkbook(files.map);
 
     const apRows=sheetToRows(mapWb,'AP');
     const arRows=sheetToRows(mapWb,'AR');
-    if(!apRows) throw new Error('ไม่พบ sheet "AP" ในไฟล์ที่เลือก');
-    if(!arRows) throw new Error('ไม่พบ sheet "AR" ในไฟล์ที่เลือก');
+    const mapRows=sheetToRows(mapWb,'mapping');
+    if(!apRows) throw new Error('ไม่พบ sheet "AP" ในไฟล์ Mapping');
+    if(!arRows) throw new Error('ไม่พบ sheet "AR" ในไฟล์ Mapping');
+    if(!mapRows) throw new Error('ไม่พบ sheet "mapping" ในไฟล์ Mapping');
 
     log(`  AP sheet   ${apRows.length.toLocaleString()} rows`);
     log(`  AR sheet   ${arRows.length.toLocaleString()} rows`);
+    log(`  mapping    ${mapRows.length.toLocaleString()} rows`);
     setProgress(.2);
 
-    // Build lookups from Google Sheets
+    // Build lookups from mapping sheet
     const vendorToCust={}, custToVendor={}, custToName={};
-    gsRows.forEach(r=>{
-      const v=r.vendor, c=r.customer, n=r.name;
+    mapRows.forEach(r=>{
+      const v=String(r['Vendor']||'').trim();
+      const c=String(r['Customer']||'').trim();
+      const n=String(r['Name']||'').trim();
       if(v&&c){vendorToCust[v]=c; custToVendor[c]=v; custToName[c]=n;}
     });
 
