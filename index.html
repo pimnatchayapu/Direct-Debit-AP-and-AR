@@ -213,12 +213,14 @@ function setFile(key,f){
   files[key]=f;
   const b=document.getElementById('badge-'+key);
   b.innerHTML=`<div class="file-badge"><span>📄</span><span class="name">${f.name}</span><span class="remove" onclick="removeFile('${key}')">✕</span></div>`;
+  document.getElementById('inp-'+key).style.pointerEvents='none';
   document.getElementById('btn-run').disabled=!files.map;
 }
 function removeFile(key){
   files[key]=null;
   document.getElementById('badge-'+key).innerHTML='';
   document.getElementById('inp-'+key).value='';
+  document.getElementById('inp-'+key).style.pointerEvents='';
   if(key==='map') document.getElementById('btn-run').disabled=true;
 }
 
