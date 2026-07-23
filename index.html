@@ -620,11 +620,9 @@ async function downloadExcel(){
   XLSX.utils.book_append_sheet(wb,wsAP,'AP Summary');
 
   // ── AR Summary ──────────────────────────────────────────────────────────
-  const hLabel=arHCol||'Col H', kLabel=arKCol||'Col K';
-  const arData=[[titleCell('AR - สรุปผลการตรวจสอบตัดหน้าบัญชี'),'','','','','','',''],
+  const arData=[[titleCell('AR - สรุปผลการตรวจสอบตัดหน้าบัญชี'),'','','','',''],
                 [hdrCell('Vendor No'),hdrCell('Customer No'),hdrCell('Vendor/Customer Name'),
-                 hdrCell('ยอด AP'),hdrCell('ยอด AR'),hdrCell('ผลการตรวจสอบ'),
-                 hdrCell(hLabel),hdrCell(kLabel)]];
+                 hdrCell('ยอด AP'),hdrCell('ยอด AR'),hdrCell('ผลการตรวจสอบ')]];
   results.forEach((r,i)=>{
     const f=rowFill(i);
     const st=r.status==='หักหน้าบัญชีได้'?'ok':r.status.startsWith('หักไม่ได้')?'no':'na';
@@ -637,13 +635,11 @@ async function downloadExcel(){
       dc(r.apTotal!=null?r.apTotal:null,'n',f,null,NUM_FMT),
       dc(r.arTotal,'n',f,null,NUM_FMT),
       dc(r.status,'s',resFill,resFont),
-      dc(r.hVal!=null?r.hVal:null,'n',f,null,NUM_FMT),
-      dc(r.kVal!=null?r.kVal:null,'n',f,null,NUM_FMT),
     ]);
   });
   const wsAR=XLSX.utils.aoa_to_sheet(arData);
-  wsAR['!merges']=[{s:{r:0,c:0},e:{r:0,c:7}}];
-  wsAR['!cols']=[{wch:14},{wch:14},{wch:36},{wch:16},{wch:16},{wch:44},{wch:18},{wch:18}];
+  wsAR['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}}];
+  wsAR['!cols']=[{wch:14},{wch:14},{wch:36},{wch:16},{wch:16},{wch:44}];
   wsAR['!rows']=[{hpt:26},{hpt:28},...results.map(()=>({hpt:20}))];
   wsAR['!freeze']={xSplit:0,ySplit:2};
   XLSX.utils.book_append_sheet(wb,wsAR,'AR Summary');
