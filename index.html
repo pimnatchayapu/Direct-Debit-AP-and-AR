@@ -639,16 +639,20 @@ async function downloadExcel(){
 
   // ── AR Detail ──────────────────────────────────────────────────────────
   if(arRawRows.length){
-    const statusByCustomer={};
-    results.forEach(r=>{statusByCustomer[r.customer]=r.status;});
+    const statusByCustomer={}, vendorByCustomer={}, nameByCustomer={};
+    results.forEach(r=>{statusByCustomer[r.customer]=r.status; vendorByCustomer[r.customer]=r.vendor; nameByCustomer[r.customer]=r.name;});
     const detHdrs=Object.keys(arRawRows[0]||{});
+    // detect which header keys map to customer/vendor/name columns (case-insensitive)
+    const custKey=detHdrs.find(h=>/customer.?no/i.test(h))||'customer no';
+    const vendKey=detHdrs.find(h=>/vendor.?no/i.test(h));
+    const nameKey=detHdrs.find(h=>/name.?mapping/i.test(h)||/name/i.test(h));
     const RED_FILL ={patternType:'solid',fgColor:{rgb:'FFCCCC'}};
     const detailData=[
       [titleCell('AR Detail - รายการทั้งหมดพร้อมผลการตรวจสอบ'),...Array(detHdrs.length).fill({v:'',t:'s',s:{}})],
       [...detHdrs.map(h=>hdrCell(h)),hdrCell('ผลการตรวจสอบ')]
     ];
     arRawRows.forEach((r,i)=>{
-      const custRaw=r['customer no'];
+      const custRaw=r[custKey];
       let customer=null;
       if(custRaw!=null&&custRaw!==''){const n=parseInt(custRaw);if(!isNaN(n))customer=String(n);}
       const status=customer?(statusByCustomer[customer]||''):'';
@@ -657,8 +661,12 @@ async function downloadExcel(){
       const resFill=st==='ok'?GRN_FILL:st==='no'?ORG_FILL:st==='na'?GRY_FILL:WHT_FILL;
       const resFont=st==='ok'?GRN_FONT:st==='no'?ORG_FONT:st==='na'?GRY_FONT:BASE_FONT;
       const cells=detHdrs.map(h=>{
-        const v=r[h];
-        const isNum=typeof v==='number';
+        let v=r[h];
+        // override lookup columns with mapped values
+        if(h===custKey) v=customer||v;
+        else if(vendKey&&h===vendKey) v=customer?(vendorByCustomer[customer]||''):v;
+        else if(nameKey&&h===nameKey) v=customer?(nameByCustomer[customer]||''):v;
+        const isNum=(typeof v==='number')&&h!==custKey&&h!==vendKey&&h!==nameKey;
         return dc(v!=null?v:'',isNum?'n':'s',rowF,null,isNum?NUM_FMT:undefined);
       });
       cells.push(dc(status,'s',resFill,{...resFont,bold:true}));
