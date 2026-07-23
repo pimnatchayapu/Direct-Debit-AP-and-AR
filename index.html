@@ -242,6 +242,7 @@
 <script>
 const files = {map: null, fbl: null};
 let results = [], curFilter = 'all';
+let arRawRows = [], arAmtCol = '';
 
 function onDrag(e,el){e.preventDefault();el.classList.add('dragover')}
 function offDrag(el){el.classList.remove('dragover')}
@@ -459,6 +460,7 @@ async function run(){
     const arHeaders=Object.keys(arRows[0]||{});
     const amtCol=arHeaders.find(h=>h&&(h.toLowerCase().includes('amount')||h.includes('จำนวนเงิน')))||arHeaders[11]||arHeaders[10];
     log(`  AR amount column: ${amtCol}`);
+    arRawRows=arRows; arAmtCol=amtCol;
 
     const arGrouped={};
     arRows.forEach(r=>{
@@ -634,6 +636,40 @@ async function downloadExcel(){
   wsAR['!rows']=[{hpt:26},{hpt:28},...results.map(()=>({hpt:20}))];
   wsAR['!freeze']={xSplit:0,ySplit:2};
   XLSX.utils.book_append_sheet(wb,wsAR,'AR Summary');
+
+  // ── AR Detail ──────────────────────────────────────────────────────────
+  if(arRawRows.length){
+    const statusByCustomer={};
+    results.forEach(r=>{statusByCustomer[r.customer]=r.status;});
+    const detHdrs=Object.keys(arRawRows[0]||{});
+    const detailData=[
+      [titleCell('AR Detail - รายการทั้งหมดพร้อมผลการตรวจสอบ'),...detHdrs.slice(1).map(()=>({v:'',t:'s',s:{}})),''],
+      [...detHdrs.map(h=>hdrCell(h)),hdrCell('ผลการตรวจสอบ')]
+    ];
+    arRawRows.forEach((r,i)=>{
+      const custRaw=r['customer no'];
+      let customer=null;
+      if(custRaw!=null&&custRaw!==''){const n=parseInt(custRaw);if(!isNaN(n))customer=String(n);}
+      const status=customer?(statusByCustomer[customer]||''):'';
+      const f=rowFill(i);
+      const st=status==='หักหน้าบัญชีได้'?'ok':status.startsWith('หักไม่ได้')?'no':status?'na':'';
+      const resFill=st==='ok'?GRN_FILL:st==='no'?ORG_FILL:st==='na'?GRY_FILL:WHT_FILL;
+      const resFont=st==='ok'?GRN_FONT:st==='no'?ORG_FONT:st==='na'?GRY_FONT:BASE_FONT;
+      const cells=detHdrs.map(h=>{
+        const v=r[h];
+        const isNum=typeof v==='number';
+        return dc(v!=null?v:'',isNum?'n':'s',f,null,isNum?NUM_FMT:undefined);
+      });
+      cells.push(dc(status,'s',resFill,{...resFont,bold:true}));
+      detailData.push(cells);
+    });
+    const wsDetail=XLSX.utils.aoa_to_sheet(detailData);
+    wsDetail['!merges']=[{s:{r:0,c:0},e:{r:0,c:detHdrs.length}}];
+    wsDetail['!cols']=[...detHdrs.map(()=>({wch:16})),{wch:44}];
+    wsDetail['!rows']=[{hpt:26},{hpt:28},...arRawRows.map(()=>({hpt:20}))];
+    wsDetail['!freeze']={xSplit:0,ySplit:2};
+    XLSX.utils.book_append_sheet(wb,wsDetail,'AR Detail');
+  }
 
   const now=new Date();
   const pad=n=>String(n).padStart(2,'0');
