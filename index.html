@@ -692,13 +692,7 @@ async function downloadExcel(){
           const invStr=v!=null?String(typeof v==='number'?Math.round(v):v).trim():'';
           return dc(invStr,'s',rowF);
         }
-        // col K (index 10): จำนวนเงิน → sum by invoice number
-        if(hi===10&&invKey){
-          const invRaw=r[invKey];
-          const invStr=invRaw!=null?String(typeof invRaw==='number'?Math.round(invRaw):invRaw).trim():'';
-          const sumAmt=invStr?(sumByInv[invStr]??null):null;
-          return dc(sumAmt!=null?sumAmt:null,'n',rowF,null,NUM_FMT);
-        }
+
         const isNum=(typeof v==='number')&&h!==custKey&&h!==vendKey&&h!==nameKey;
         return dc(v!=null?v:'',isNum?'n':'s',rowF,null,isNum?NUM_FMT:undefined);
       });
