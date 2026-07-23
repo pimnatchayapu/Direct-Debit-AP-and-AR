@@ -687,6 +687,10 @@ async function downloadExcel(){
         if(h===custKey) v=customer||v;
         else if(vendKey&&h===vendKey) v=customer?(vendorByCustomer[customer]||''):v;
         else if(nameKey&&h===nameKey) v=customer?(nameByCustomer[customer]||''):v;
+        // col F (index 5): date column → DD/MM/YYYY format
+        if(hi===5&&typeof v==='number'){
+          return dc(v,'n',rowF,null,'DD/MM/YYYY');
+        }
         // col H (index 7): เลขที่ใบแจ้งหนี้ → force text (General)
         if(hi===7){
           const invStr=v!=null?String(typeof v==='number'?Math.round(v):v).trim():'';
