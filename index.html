@@ -653,6 +653,20 @@ async function downloadExcel(){
     const custKey=detHdrs.find(h=>/customer.?no/i.test(h))||'customer no';
     const vendKey=detHdrs.find(h=>/vendor.?no/i.test(h));
     const nameKey=detHdrs.find(h=>/name.?mapping/i.test(h)||/name/i.test(h));
+    // H = index 7 (เลขที่ใบแจ้งหนี้), K = index 10 (จำนวนเงิน)
+    const invKey=detHdrs[7]||'';
+    const amtKey=detHdrs[10]||'';
+    // pre-compute sum of K (จำนวนเงิน) grouped by H (เลขที่ใบแจ้งหนี้)
+    const sumByInv={};
+    if(invKey&&amtKey){
+      arRawRows.forEach(r=>{
+        const inv=r[invKey];
+        if(inv==null||inv==='') return;
+        const invStr=String(typeof inv==='number'?Math.round(inv):inv).trim();
+        const amt=parseFloat(r[amtKey]||0);
+        if(!isNaN(amt)) sumByInv[invStr]=(sumByInv[invStr]||0)+amt;
+      });
+    }
     const RED_FILL ={patternType:'solid',fgColor:{rgb:'FFCCCC'}};
     const detailData=[
       [titleCell('AR Detail - รายการทั้งหมดพร้อมผลการตรวจสอบ'),...Array(detHdrs.length).fill({v:'',t:'s',s:{}})],
@@ -667,12 +681,24 @@ async function downloadExcel(){
       const rowF=st==='ok'?GRN_FILL:st==='no'?RED_FILL:st==='na'?GRY_FILL:WHT_FILL;
       const resFill=st==='ok'?GRN_FILL:st==='no'?ORG_FILL:st==='na'?GRY_FILL:WHT_FILL;
       const resFont=st==='ok'?GRN_FONT:st==='no'?ORG_FONT:st==='na'?GRY_FONT:BASE_FONT;
-      const cells=detHdrs.map(h=>{
+      const cells=detHdrs.map((h,hi)=>{
         let v=r[h];
         // override lookup columns with mapped values
         if(h===custKey) v=customer||v;
         else if(vendKey&&h===vendKey) v=customer?(vendorByCustomer[customer]||''):v;
         else if(nameKey&&h===nameKey) v=customer?(nameByCustomer[customer]||''):v;
+        // col H (index 7): เลขที่ใบแจ้งหนี้ → force text (General)
+        if(hi===7){
+          const invStr=v!=null?String(typeof v==='number'?Math.round(v):v).trim():'';
+          return dc(invStr,'s',rowF);
+        }
+        // col K (index 10): จำนวนเงิน → sum by invoice number
+        if(hi===10&&invKey){
+          const invRaw=r[invKey];
+          const invStr=invRaw!=null?String(typeof invRaw==='number'?Math.round(invRaw):invRaw).trim():'';
+          const sumAmt=invStr?(sumByInv[invStr]??null):null;
+          return dc(sumAmt!=null?sumAmt:null,'n',rowF,null,NUM_FMT);
+        }
         const isNum=(typeof v==='number')&&h!==custKey&&h!==vendKey&&h!==nameKey;
         return dc(v!=null?v:'',isNum?'n':'s',rowF,null,isNum?NUM_FMT:undefined);
       });
