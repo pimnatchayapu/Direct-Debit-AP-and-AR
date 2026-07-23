@@ -715,16 +715,15 @@ async function downloadExcel(){
   // inject tab color for AR Summary via JSZip
   const rawBuf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
   const zip=await JSZip.loadAsync(rawBuf);
-  const sheetEntry=zip.file('xl/worksheets/sheet2.xml');
-  if(sheetEntry){
-    let xml=await sheetEntry.async('string');
-    if(!xml.includes('<sheetPr')){
-      xml=xml.replace(/(<worksheet[^>]*>)/,'$1<sheetPr><tabColor rgb="FFFF00"/></sheetPr>');
-    } else if(!xml.includes('tabColor')){
-      xml=xml.replace('<sheetPr>','<sheetPr><tabColor rgb="FFFF00"/>');
-    }
-    zip.file('xl/worksheets/sheet2.xml',xml);
-  }
+  const injectTab=async(file,color)=>{
+    const e=zip.file(file); if(!e) return;
+    let xml=await e.async('string');
+    if(!xml.includes('<sheetPr')) xml=xml.replace(/(<worksheet[^>]*>)/,`$1<sheetPr><tabColor rgb="${color}"/></sheetPr>`);
+    else if(!xml.includes('tabColor')) xml=xml.replace('<sheetPr>',`<sheetPr><tabColor rgb="${color}"/>`);
+    zip.file(file,xml);
+  };
+  await injectTab('xl/worksheets/sheet2.xml','FFFF00');  // AR Summary → เหลือง
+  await injectTab('xl/worksheets/sheet3.xml','00B050');  // AR Detail → เขียว
   const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
